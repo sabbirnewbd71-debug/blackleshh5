@@ -1,11 +1,36 @@
 const { Client, GatewayIntentBits, EmbedBuilder } = require("discord.js");
 const express = require("express");
+const bodyParser = require("body-parser");
 
-/* ================= PING SERVER ================= */
+/* ================= LIVE MESSAGE STORAGE ================= */
+let welcomeText =
+  "আমাদের সার্ভারে আপনাকে স্বাগতম। অনুগ্রহ করে নিয়মগুলো পড়ে নিন।";
+
+/* ================= WEB SERVER ================= */
 const app = express();
+app.use(bodyParser.urlencoded({ extended: false }));
+
+// Ping route
 app.get("/", (req, res) => {
-  res.send("Bot is alive ✅");
+  res.send("✅ বট চালু আছে");
 });
+
+// Admin panel
+app.get("/admin", (req, res) => {
+  res.send(`
+    <h2>🔴 Welcome Message Control</h2>
+    <form method="POST">
+      <textarea name="text" rows="6" cols="50">${welcomeText}</textarea><br><br>
+      <button type="submit">Save Message</button>
+    </form>
+  `);
+});
+
+app.post("/admin", (req, res) => {
+  welcomeText = req.body.text || welcomeText;
+  res.send("✅ Message আপডেট হয়েছে! <a href='/admin'>ফিরে যাও</a>");
+});
+
 app.listen(process.env.PORT || 3000);
 
 /* ================= DISCORD BOT ================= */
@@ -17,39 +42,32 @@ const client = new Client({
 });
 
 client.once("ready", () => {
-  console.log(`${client.user.tag} is online`);
+  console.log(`🤖 বট অনলাইন: ${client.user.tag}`);
 });
 
 /* ================= JOIN DETECT ================= */
 client.on("guildMemberAdd", member => {
-
   const channel = member.guild.channels.cache.get("1459543428730847315");
   if (!channel) return;
 
-  // Account age
-  const created = member.user.createdAt;
+  const createdAt = member.user.createdAt;
   const now = new Date();
-  const years = Math.floor((now - created) / (1000 * 60 * 60 * 24 * 365));
-  const months = Math.floor(
-    ((now - created) / (1000 * 60 * 60 * 24 * 30)) % 12
-  );
+  const days = Math.floor((now - createdAt) / (1000 * 60 * 60 * 24));
+  const years = Math.floor(days / 365);
+  const months = Math.floor((days % 365) / 30);
 
   const embed = new EmbedBuilder()
-    .setColor(0xE10600) // 🔴 Professional Red
-    .setTitle(`WELCOME • ${member.user.username}`)
-    .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 512 }))
+    .setColor(0xE10600)
+    .setTitle(`👋 স্বাগতম ${member.user.username}`)
     .setDescription(
-      `**${member.user.tag}** has joined **${member.guild.name}**.\n\n` +
-      `Please read the rules and enjoy your stay.`
+      `**${member.user.tag}** আমাদের **${member.guild.name}** সার্ভারে যোগ দিয়েছেন।\n\n` +
+      `📝 **বার্তা:**\n${welcomeText}`
     )
     .addFields(
-      { name: "🏠 Server", value: member.guild.name, inline: true },
-      { name: "⏳ Account Age", value: `${years}y ${months}m`, inline: true }
+      { name: "🏠 সার্ভার", value: member.guild.name, inline: true },
+      { name: "⏳ অ্যাকাউন্ট বয়স", value: `${years} বছর ${months} মাস`, inline: true }
     )
-    .setFooter({
-      text: `${member.guild.name} • Welcome System`,
-      iconURL: member.guild.iconURL({ dynamic: true })
-    })
+    .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
     .setTimestamp();
 
   channel.send({ embeds: [embed] });
