@@ -1,8 +1,11 @@
+// Discord.js
 const { Client, GatewayIntentBits, EmbedBuilder } = require("discord.js");
-const firebase = require("firebase/app");
-require("firebase/database");
 
-// Firebase init
+// Firebase v9 Modular SDK (Node.js)
+const { initializeApp } = require("firebase/app");
+const { getDatabase, ref, get, set } = require("firebase/database");
+
+// Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyDgcOMktV2WUxwJoh0ySBPzfhwicxxb7sM",
   authDomain: "admin-4bc65.firebaseapp.com",
@@ -13,29 +16,33 @@ const firebaseConfig = {
   appId: "1:1049052911788:web:17343a2b41154c7e0d2709",
   measurementId: "G-03ZQ7CJTSV"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
 
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// Discord Bot
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
-// Arrays for flashy embed
+// Flashy embed arrays
 const colors = [0xFF0000,0xFF4500,0xFF6347,0xFF1493,0xFF69B4];
 const titleEmojis = ["✨","🎉","💫","🌟","🔥"];
 const fancyFonts = ["𝗪𝗘𝗟𝗖𝗢𝗠𝗘","𝓦𝓔𝓛𝓒𝓞𝓜𝓔","𝑾𝑬𝑳𝑪𝑶𝑴𝑬","🄆🄴🄻🄲🄾🄼🄴","🌟WELCOME🌟"];
 const textEmojis = ["💌","📢","📯","🎈","🌈"];
 
-let joinQueue = []; // For carousel
+let joinQueue = []; // Carousel queue
 
 client.once("ready", ()=>console.log(`🤖 Bot online: ${client.user.tag}`));
 
+// New member join
 client.on("guildMemberAdd", async member=>{
-  joinQueue.push(member); // Add to queue
+  joinQueue.push(member);
   if(joinQueue.length === 1){
-    // Start carousel
     runCarousel(member.guild);
   }
 });
 
+// Carousel function
 async function runCarousel(guild){
   while(joinQueue.length > 0){
     const member = joinQueue[0];
@@ -52,6 +59,7 @@ async function runCarousel(guild){
     const months = Math.floor((days%365)/30);
     const memberCount = guild.memberCount;
 
+    // Inviter detection
     let inviter = "Unknown";
     try{
       const invites = await guild.invites.fetch();
@@ -62,7 +70,8 @@ async function runCarousel(guild){
 
     const gifThumbnail = "https://cdn.jsdelivr.net/gh/dsabbir111/yghjjhhjK@refs/heads/main/350kb.gif";
 
-    const snapshot = await db.ref('welcomeMessage').get();
+    // Get live welcome message from Firebase
+    const snapshot = await get(ref(db, 'welcomeMessage'));
     const liveMessage = snapshot.exists()?snapshot.val():"✨ আমাদের সার্ভারে স্বাগতম 🎉";
 
     const embed = new EmbedBuilder()
@@ -81,23 +90,29 @@ async function runCarousel(guild){
 
     const message = await channel.send({embeds:[embed]});
 
-    // Animate embed carousel 3 seconds per frame
-    let index=1;
+    // Animate embed carousel
+    let index = 1;
     const interval = setInterval(()=>{
-      if(index >= colors.length) index=0;
+      if(index >= colors.length) index = 0;
       const newEmbed = EmbedBuilder.from(embed)
         .setColor(colors[index])
         .setTitle(`${titleEmojis[index]} ${fancyFonts[index]} • ${member.user.username} ${titleEmojis[(index+1)%titleEmojis.length]}`)
         .setDescription(`${textEmojis[index]} **${member.user.tag}** আমাদের **${guild.name}** সার্ভারে যোগ দিয়েছেন!\n\n${textEmojis[(index+1)%textEmojis.length]} ${liveMessage}`);
       message.edit({embeds:[newEmbed]});
       index++;
-    },3000);
+    }, 3000);
 
-    // Wait 15 sec before next member
-    await new Promise(r=>setTimeout(r,15000));
+    // Wait 15 sec per member
+    await new Promise(r => setTimeout(r,15000));
     clearInterval(interval);
     joinQueue.shift();
   }
 }
+
+// Express ping endpoint (keep alive for free host)
+const express = require("express");
+const appServer = express();
+appServer.get("/", (req,res)=>res.send("✅ Bot is running"));
+appServer.listen(process.env.PORT || 3000, ()=>console.log("🌐 Web server started"));
 
 client.login(process.env.TOKEN);
