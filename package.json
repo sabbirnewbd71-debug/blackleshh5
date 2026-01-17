@@ -1,5 +1,5 @@
 {
-  "name": "discord-welcome-bot",
+  "name": "discord-live-welcome",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "discord.js": "^14.14.1",
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "body-parser": "^1.20.2"
   }
 }
